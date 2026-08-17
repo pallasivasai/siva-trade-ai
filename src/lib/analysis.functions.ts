@@ -28,7 +28,7 @@ export const analyzeTrade = createServerFn({ method: "POST" })
     const { streamText, Output, NoObjectGeneratedError } = await import("ai");
     const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
 
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createLovableAiGatewayProvider(key, { structuredOutputs: true });
 
     const schema = z.object({
       summary: z.string(),
