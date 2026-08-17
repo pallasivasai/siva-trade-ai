@@ -62,6 +62,8 @@ risks: 2-3 చిన్న రిస్క్ పాయింట్లు.
         prompt,
         output: Output.object({ schema }),
       });
+      // consume the stream so the output promise resolves
+      for await (const _ of result.textStream) void _;
       const output = await result.output;
       return {
         ...output,
