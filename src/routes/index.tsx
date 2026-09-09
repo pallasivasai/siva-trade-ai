@@ -49,9 +49,12 @@ function Index() {
   const [risk, setRisk] = useState(risks[1]);
   const [capital, setCapital] = useState("");
 
+  const [analyzedSymbol, setAnalyzedSymbol] = useState("");
+
   const run = useServerFn(analyzeTrade);
   const mutation = useMutation<AnalysisResult, Error>({
     mutationFn: () => run({ data: { symbol, timeframe, risk, capital } }),
+    onSuccess: () => setAnalyzedSymbol(symbol.trim()),
   });
 
   const result = mutation.data;
