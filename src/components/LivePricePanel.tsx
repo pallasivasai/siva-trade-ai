@@ -33,6 +33,7 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
   const [target, setTarget] = useState<string>("");
   const [stop, setStop] = useState<string>("");
   const firedRef = useRef<{ target: boolean; stop: boolean }>({ target: false, stop: false });
+  const armedRef = useRef(false);
 
   const entry = useMemo(() => firstNumber(entryText), [entryText]);
 
