@@ -41,6 +41,7 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
     setTarget(String(firstNumber(targetText) ?? ""));
     setStop(String(firstNumber(stopLossText) ?? ""));
     firedRef.current = { target: false, stop: false };
+    armedRef.current = false;
   }, [symbol, targetText, stopLossText]);
 
   const query = useQuery<Quote, Error>({
@@ -182,6 +183,7 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
               onChange={(e) => {
                 setTarget(e.target.value);
                 firedRef.current.target = false;
+                armedRef.current = false;
               }}
             />
           </div>
@@ -196,6 +198,7 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
               onChange={(e) => {
                 setStop(e.target.value);
                 firedRef.current.stop = false;
+                armedRef.current = false;
               }}
             />
           </div>
