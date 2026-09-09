@@ -67,7 +67,10 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
 
     if (t && !firedRef.current.target) {
       const hit = up ? price >= t : price <= t;
-      if (hit) {
+      if (hit && !armedRef.current) {
+        // level already crossed on the very first reading — don't cry wolf
+        firedRef.current.target = true;
+      } else if (hit) {
         firedRef.current.target = true;
         notify(
           `🎯 ${quote.symbol} టార్గెట్ చేరింది!`,
