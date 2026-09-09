@@ -80,7 +80,9 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
     }
     if (s && !firedRef.current.stop) {
       const hit = up ? price <= s : price >= s;
-      if (hit) {
+      if (hit && !armedRef.current) {
+        firedRef.current.stop = true;
+      } else if (hit) {
         firedRef.current.stop = true;
         notify(
           `⚠️ ${quote.symbol} స్టాప్ లాస్ తాకింది!`,
@@ -88,6 +90,7 @@ export function LivePricePanel({ symbol, entryText, targetText, stopLossText }: 
         );
       }
     }
+    armedRef.current = true;
   }, [quote, alertsOn, target, stop, entry]);
 
   const enableAlerts = async (on: boolean) => {
