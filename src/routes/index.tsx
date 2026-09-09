@@ -234,6 +234,16 @@ function Index() {
           </Card>
         )}
 
+        {result && analyzedSymbol && (
+          <LivePricePanel
+            symbol={analyzedSymbol}
+            entryText={result.entry}
+            targetText={result.target}
+            stopLossText={result.stopLoss}
+          />
+        )}
+
+
         <p className="mt-6 flex items-start gap-2 rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent" />
           గమనిక: ఇది విద్యా మరియు సమాచార ప్రయోజనం కోసమే. మార్కెట్‌లో ఎప్పుడూ లాభం గ్యారెంటీ ఉండదు —
