@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { analyzeTrade, type AnalysisResult } from "@/lib/analysis.functions";
-import { LivePricePanel } from "@/components/LivePricePanel";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,12 +48,9 @@ function Index() {
   const [risk, setRisk] = useState(risks[1]);
   const [capital, setCapital] = useState("");
 
-  const [analyzedSymbol, setAnalyzedSymbol] = useState("");
-
   const run = useServerFn(analyzeTrade);
   const mutation = useMutation<AnalysisResult, Error>({
     mutationFn: () => run({ data: { symbol, timeframe, risk, capital } }),
-    onSuccess: () => setAnalyzedSymbol(symbol.trim()),
   });
 
   const result = mutation.data;
@@ -233,16 +229,6 @@ function Index() {
             </CardContent>
           </Card>
         )}
-
-        {result && analyzedSymbol && (
-          <LivePricePanel
-            symbol={analyzedSymbol}
-            entryText={result.entry}
-            targetText={result.target}
-            stopLossText={result.stopLoss}
-          />
-        )}
-
 
         <p className="mt-6 flex items-start gap-2 rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent" />
