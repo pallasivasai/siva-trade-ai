@@ -30,11 +30,17 @@ function candidates(raw: string): string[] {
   return [...new Set(list)];
 }
 
-async function fetchOne(ticker: string): Promise<Quote | null> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+async function fetchOne(ticker: string, host: string): Promise<Quote | null> {
+  const url = `https://${host}/v8/finance/chart/${encodeURIComponent(
     ticker,
   )}?interval=1m&range=1d`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+      Accept: "application/json",
+    },
+  });
   if (!res.ok) return null;
   const json = (await res.json()) as {
     chart?: { result?: Array<{ meta?: Record<string, unknown> }> };
