@@ -1,14 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { TrendingUp, ShieldCheck, Sparkles, Gauge, LineChart, AlertTriangle } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  TrendingUp,
+  ShieldCheck,
+  Sparkles,
+  Gauge,
+  LineChart,
+  AlertTriangle,
+  Bell,
+  BellOff,
+  Radio,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { analyzeTrade, type AnalysisResult } from "@/lib/analysis.functions";
+import { getQuote, type Quote } from "@/lib/quote.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
