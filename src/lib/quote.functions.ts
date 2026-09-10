@@ -15,7 +15,9 @@ export type Quote = {
   updatedAt: number;
 };
 
-const CRYPTO = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "MATIC", "LTC", "TRX", "AVAX"];
+export type QuoteResult = { quote: Quote | null; message?: string };
+
+const CRYPTO =  ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "MATIC", "LTC", "TRX", "AVAX"];
 
 function candidates(raw: string): string[] {
   const s = raw.trim().toUpperCase().replace(/\s+/g, "");
