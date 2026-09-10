@@ -283,20 +283,66 @@ function Index() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="rounded-lg border border-border bg-secondary p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Radio className="size-3.5 animate-pulse text-[var(--bull)]" /> లైవ్ ధర
+                      {quoteQuery.isFetching && <span>(అప్‌డేట్ అవుతోంది...)</span>}
+                    </div>
+                    <div className="mt-1 text-2xl font-bold">
+                      {quote ? formatPrice(quote.price, quote.currency) : "—"}
+                    </div>
+                    {quote && (
+                      <div
+                        className={
+                          quote.changePercent >= 0
+                            ? "text-xs text-[var(--bull)]"
+                            : "text-xs text-[var(--bear)]"
+                        }
+                      >
+                        {quote.changePercent >= 0 ? "▲" : "▼"} {Math.abs(quote.changePercent).toFixed(2)}% ·{" "}
+                        {new Date(quote.updatedAt).toLocaleTimeString("en-IN")}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {alertsOn ? (
+                      <Bell className="size-4 text-primary" />
+                    ) : (
+                      <BellOff className="size-4 text-muted-foreground" />
+                    )}
+                    <Label htmlFor="alerts" className="text-xs">
+                      ధర అలర్ట్‌లు
+                    </Label>
+                    <Switch id="alerts" checked={alertsOn} onCheckedChange={toggleAlerts} />
+                  </div>
+                </div>
+                {quoteQuery.isError && (
+                  <p className="mt-2 text-xs text-muted-foreground">{quoteQuery.error.message}</p>
+                )}
+              </div>
+
               <p className="text-sm leading-relaxed text-muted-foreground">{result.summary}</p>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { label: "ఎంట్రీ", value: result.entry },
-                  { label: "టార్గెట్", value: result.target },
-                  { label: "స్టాప్ లాస్", value: result.stopLoss },
+                  { label: "ఎంట్రీ", value: result.entry, level: result.entryPrice },
+                  { label: "టార్గెట్", value: result.target, level: result.targetPrice },
+                  { label: "స్టాప్ లాస్", value: result.stopLoss, level: result.stopPrice },
                 ].map((item) => (
                   <div key={item.label} className="rounded-lg border border-border bg-secondary p-3">
                     <div className="text-xs text-muted-foreground">{item.label}</div>
                     <div className="mt-1 font-semibold">{item.value}</div>
+                    {quote && item.level > 0 && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        లైవ్ ధర నుండి {(((item.level - quote.price) / quote.price) * 100).toFixed(2)}%
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
