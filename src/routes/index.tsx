@@ -115,7 +115,8 @@ function Index() {
   });
 
   const result = mutation.data;
-  const quote = quoteQuery.data;
+  const quote = quoteQuery.data?.quote ?? null;
+  const quoteMessage = quoteQuery.data?.message ?? quoteQuery.error?.message ?? null;
 
   // లైవ్ ధర టార్గెట్ / స్టాప్‌లాస్‌ను తాకినప్పుడు తెలుగులో అలర్ట్
   useEffect(() => {
