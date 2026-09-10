@@ -319,8 +319,8 @@ function Index() {
                     <Switch id="alerts" checked={alertsOn} onCheckedChange={toggleAlerts} />
                   </div>
                 </div>
-                {quoteQuery.isError && (
-                  <p className="mt-2 text-xs text-muted-foreground">{quoteQuery.error.message}</p>
+                {!quote && quoteMessage && (
+                  <p className="mt-2 text-xs text-muted-foreground">{quoteMessage}</p>
                 )}
               </div>
 
