@@ -15,7 +15,9 @@ export type Quote = {
   updatedAt: number;
 };
 
-const CRYPTO = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "MATIC", "LTC", "TRX", "AVAX"];
+export type QuoteResult = { quote: Quote | null; message?: string };
+
+const CRYPTO =  ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "MATIC", "LTC", "TRX", "AVAX"];
 
 function candidates(raw: string): string[] {
   const s = raw.trim().toUpperCase().replace(/\s+/g, "");
@@ -30,11 +32,17 @@ function candidates(raw: string): string[] {
   return [...new Set(list)];
 }
 
-async function fetchOne(ticker: string): Promise<Quote | null> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+async function fetchOne(ticker: string, host: string): Promise<Quote | null> {
+  const url = `https://${host}/v8/finance/chart/${encodeURIComponent(
     ticker,
   )}?interval=1m&range=1d`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+      Accept: "application/json",
+    },
+  });
   if (!res.ok) return null;
   const json = (await res.json()) as {
     chart?: { result?: Array<{ meta?: Record<string, unknown> }> };
@@ -58,14 +66,19 @@ async function fetchOne(ticker: string): Promise<Quote | null> {
 
 export const getQuote = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => QuoteInput.parse(input))
-  .handler(async ({ data }): Promise<Quote> => {
+  .handler(async ({ data }): Promise<QuoteResult> => {
     for (const ticker of candidates(data.symbol)) {
-      try {
-        const quote = await fetchOne(ticker);
-        if (quote) return quote;
-      } catch {
-        // try next candidate
+      for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+        try {
+          const quote = await fetchOne(ticker, host);
+          if (quote) return { quote };
+        } catch {
+          // try next host / candidate
+        }
       }
     }
-    throw new Error("ప్రస్తుత ధర దొరకలేదు. సింబల్ సరిచూడండి (ఉదా: RELIANCE, TCS, BTC).");
+    return {
+      quote: null,
+      message: "ప్రస్తుత ధర దొరకలేదు. సింబల్ సరిచూడండి (ఉదా: RELIANCE, TCS, BTC).",
+    };
   });

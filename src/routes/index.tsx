@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { analyzeTrade, type AnalysisResult } from "@/lib/analysis.functions";
-import { getQuote, type Quote } from "@/lib/quote.functions";
+import { getQuote, type QuoteResult } from "@/lib/quote.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -83,7 +83,7 @@ function Index() {
   const run = useServerFn(analyzeTrade);
   const quoteFn = useServerFn(getQuote);
 
-  const quoteQuery = useQuery<Quote, Error>({
+  const quoteQuery = useQuery<QuoteResult, Error>({
     queryKey: ["quote", activeSymbol],
     enabled: activeSymbol.length > 0,
     queryFn: () => quoteFn({ data: { symbol: activeSymbol } }),
@@ -94,11 +94,11 @@ function Index() {
 
   const mutation = useMutation<AnalysisResult, Error>({
     mutationFn: async () => {
-      let live: Quote | undefined;
+      let live: QuoteResult["quote"] = null;
       try {
-        live = await quoteFn({ data: { symbol } });
+        live = (await quoteFn({ data: { symbol } })).quote;
       } catch {
-        live = undefined;
+        live = null;
       }
       firedRef.current = { target: false, stop: false };
       setActiveSymbol(symbol.trim());
@@ -115,7 +115,8 @@ function Index() {
   });
 
   const result = mutation.data;
-  const quote = quoteQuery.data;
+  const quote = quoteQuery.data?.quote ?? null;
+  const quoteMessage = quoteQuery.data?.message ?? quoteQuery.error?.message ?? null;
 
   // లైవ్ ధర టార్గెట్ / స్టాప్‌లాస్‌ను తాకినప్పుడు తెలుగులో అలర్ట్
   useEffect(() => {
@@ -318,8 +319,8 @@ function Index() {
                     <Switch id="alerts" checked={alertsOn} onCheckedChange={toggleAlerts} />
                   </div>
                 </div>
-                {quoteQuery.isError && (
-                  <p className="mt-2 text-xs text-muted-foreground">{quoteQuery.error.message}</p>
+                {!quote && quoteMessage && (
+                  <p className="mt-2 text-xs text-muted-foreground">{quoteMessage}</p>
                 )}
               </div>
 
