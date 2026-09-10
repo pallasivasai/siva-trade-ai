@@ -6,6 +6,8 @@ const AnalysisInput = z.object({
   timeframe: z.string().min(1).max(30),
   risk: z.string().min(1).max(30),
   capital: z.string().max(20).optional(),
+  currentPrice: z.number().optional(),
+  currency: z.string().max(10).optional(),
 });
 
 export type AnalysisResult = {
@@ -39,6 +41,9 @@ export const analyzeTrade = createServerFn({ method: "POST" })
       entry: z.string(),
       target: z.string(),
       stopLoss: z.string(),
+      entryPrice: z.number(),
+      targetPrice: z.number(),
+      stopPrice: z.number(),
       confidence: z.number(),
       reasons: z.array(z.string()),
       risks: z.array(z.string()),
@@ -49,11 +54,13 @@ export const analyzeTrade = createServerFn({ method: "POST" })
 టైమ్‌ఫ్రేమ్: ${data.timeframe}
 రిస్క్ స్థాయి: ${data.risk}
 పెట్టుబడి: ${data.capital || "చెప్పలేదు"}
+ప్రస్తుత లైవ్ ధర: ${data.currentPrice ? `${data.currentPrice} ${data.currency || ""}` : "తెలియదు"}
 
 అన్ని సమాధానాలు తెలుగులోనే ఇవ్వు (సంఖ్యలు ఆంగ్ల అంకెల్లో).
 summary: 2-3 వాక్యాల సరళమైన వివరణ.
 bias: "బుల్లిష్" / "బేరిష్" / "న్యూట్రల్" లో ఒకటి.
-entry, target, stopLoss: సాధారణ స్థాయి సూచనలు (శాతం లేదా ధర పరిధిగా).
+entry, target, stopLoss: ప్రస్తుత ధరకు దగ్గరగా ఉండే స్థాయి సూచనలు (ధర పరిధిగా).
+entryPrice, targetPrice, stopPrice: పైవాటికి సరిపోయే ఖచ్చితమైన ఒక్కో సంఖ్య (కరెన్సీ గుర్తు లేకుండా, ప్రస్తుత ధర స్కేల్‌లోనే).
 confidence: 0-100 మధ్య సంఖ్య.
 reasons: 3-4 చిన్న పాయింట్లు.
 risks: 2-3 చిన్న రిస్క్ పాయింట్లు.
