@@ -83,7 +83,7 @@ function Index() {
   const run = useServerFn(analyzeTrade);
   const quoteFn = useServerFn(getQuote);
 
-  const quoteQuery = useQuery<Quote, Error>({
+  const quoteQuery = useQuery<QuoteResult, Error>({
     queryKey: ["quote", activeSymbol],
     enabled: activeSymbol.length > 0,
     queryFn: () => quoteFn({ data: { symbol: activeSymbol } }),
@@ -94,11 +94,11 @@ function Index() {
 
   const mutation = useMutation<AnalysisResult, Error>({
     mutationFn: async () => {
-      let live: Quote | undefined;
+      let live: QuoteResult["quote"] = null;
       try {
-        live = await quoteFn({ data: { symbol } });
+        live = (await quoteFn({ data: { symbol } })).quote;
       } catch {
-        live = undefined;
+        live = null;
       }
       firedRef.current = { target: false, stop: false };
       setActiveSymbol(symbol.trim());
