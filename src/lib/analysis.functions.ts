@@ -14,6 +14,9 @@ export type AnalysisResult = {
   entry: string;
   target: string;
   stopLoss: string;
+  entryPrice: number;
+  targetPrice: number;
+  stopPrice: number;
   confidence: number;
   reasons: string[];
   risks: string[];
