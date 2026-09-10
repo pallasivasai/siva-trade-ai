@@ -1,14 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { TrendingUp, ShieldCheck, Sparkles, Gauge, LineChart, AlertTriangle } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  TrendingUp,
+  ShieldCheck,
+  Sparkles,
+  Gauge,
+  LineChart,
+  AlertTriangle,
+  Bell,
+  BellOff,
+  Radio,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { analyzeTrade, type AnalysisResult } from "@/lib/analysis.functions";
+import { getQuote, type Quote } from "@/lib/quote.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,18 +55,103 @@ export const Route = createFileRoute("/")({
 const timeframes = ["ఇంట్రాడే", "స్వింగ్ (1-2 వారాలు)", "లాంగ్ టర్మ్"];
 const risks = ["తక్కువ", "మధ్యస్థం", "ఎక్కువ"];
 
+function formatPrice(value: number, currency: string) {
+  const symbol = currency === "INR" ? "₹" : currency === "USD" ? "$" : "";
+  return `${symbol}${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+function notify(title: string, body: string) {
+  toast(title, { description: body, duration: 10000 });
+  try {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") new Notification(title, { body });
+    }
+  } catch {
+    // notifications unavailable
+  }
+}
+
 function Index() {
   const [symbol, setSymbol] = useState("");
   const [timeframe, setTimeframe] = useState(timeframes[1]);
   const [risk, setRisk] = useState(risks[1]);
   const [capital, setCapital] = useState("");
+  const [activeSymbol, setActiveSymbol] = useState("");
+  const [alertsOn, setAlertsOn] = useState(true);
+  const firedRef = useRef<{ target: boolean; stop: boolean }>({ target: false, stop: false });
 
   const run = useServerFn(analyzeTrade);
+  const quoteFn = useServerFn(getQuote);
+
+  const quoteQuery = useQuery<Quote, Error>({
+    queryKey: ["quote", activeSymbol],
+    enabled: activeSymbol.length > 0,
+    queryFn: () => quoteFn({ data: { symbol: activeSymbol } }),
+    refetchInterval: 15000,
+    refetchIntervalInBackground: true,
+    retry: 1,
+  });
+
   const mutation = useMutation<AnalysisResult, Error>({
-    mutationFn: () => run({ data: { symbol, timeframe, risk, capital } }),
+    mutationFn: async () => {
+      let live: Quote | undefined;
+      try {
+        live = await quoteFn({ data: { symbol } });
+      } catch {
+        live = undefined;
+      }
+      firedRef.current = { target: false, stop: false };
+      setActiveSymbol(symbol.trim());
+      return run({
+        data: {
+          symbol,
+          timeframe,
+          risk,
+          capital,
+          ...(live ? { currentPrice: live.price, currency: live.currency } : {}),
+        },
+      });
+    },
   });
 
   const result = mutation.data;
+  const quote = quoteQuery.data;
+
+  // లైవ్ ధర టార్గెట్ / స్టాప్‌లాస్‌ను తాకినప్పుడు తెలుగులో అలర్ట్
+  useEffect(() => {
+    if (!alertsOn || !result || !quote) return;
+    const price = quote.price;
+    const bullish = result.targetPrice >= result.entryPrice;
+    const hitTarget = bullish ? price >= result.targetPrice : price <= result.targetPrice;
+    const hitStop = bullish ? price <= result.stopPrice : price >= result.stopPrice;
+
+    if (hitTarget && !firedRef.current.target) {
+      firedRef.current.target = true;
+      notify(
+        `🎯 ${activeSymbol.toUpperCase()} టార్గెట్ చేరింది!`,
+        `ప్రస్తుత ధర ${formatPrice(price, quote.currency)} — మీ టార్గెట్ ${formatPrice(result.targetPrice, quote.currency)} చేరుకుంది. లాభం బుక్ చేయడం గురించి ఆలోచించండి.`,
+      );
+    }
+    if (hitStop && !firedRef.current.stop) {
+      firedRef.current.stop = true;
+      notify(
+        `⚠️ ${activeSymbol.toUpperCase()} స్టాప్ లాస్ తాకింది`,
+        `ప్రస్తుత ధర ${formatPrice(price, quote.currency)} — మీ స్టాప్ లాస్ ${formatPrice(result.stopPrice, quote.currency)} దాటింది. రిస్క్‌ను నియంత్రించండి.`,
+      );
+    }
+  }, [quote, result, alertsOn, activeSymbol]);
+
+  const toggleAlerts = async (on: boolean) => {
+    setAlertsOn(on);
+    if (on && typeof window !== "undefined" && "Notification" in window) {
+      try {
+        if (Notification.permission === "default") await Notification.requestPermission();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
 
   return (
     <main className="min-h-screen">
@@ -185,20 +283,66 @@ function Index() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="rounded-lg border border-border bg-secondary p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Radio className="size-3.5 animate-pulse text-[var(--bull)]" /> లైవ్ ధర
+                      {quoteQuery.isFetching && <span>(అప్‌డేట్ అవుతోంది...)</span>}
+                    </div>
+                    <div className="mt-1 text-2xl font-bold">
+                      {quote ? formatPrice(quote.price, quote.currency) : "—"}
+                    </div>
+                    {quote && (
+                      <div
+                        className={
+                          quote.changePercent >= 0
+                            ? "text-xs text-[var(--bull)]"
+                            : "text-xs text-[var(--bear)]"
+                        }
+                      >
+                        {quote.changePercent >= 0 ? "▲" : "▼"} {Math.abs(quote.changePercent).toFixed(2)}% ·{" "}
+                        {new Date(quote.updatedAt).toLocaleTimeString("en-IN")}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {alertsOn ? (
+                      <Bell className="size-4 text-primary" />
+                    ) : (
+                      <BellOff className="size-4 text-muted-foreground" />
+                    )}
+                    <Label htmlFor="alerts" className="text-xs">
+                      ధర అలర్ట్‌లు
+                    </Label>
+                    <Switch id="alerts" checked={alertsOn} onCheckedChange={toggleAlerts} />
+                  </div>
+                </div>
+                {quoteQuery.isError && (
+                  <p className="mt-2 text-xs text-muted-foreground">{quoteQuery.error.message}</p>
+                )}
+              </div>
+
               <p className="text-sm leading-relaxed text-muted-foreground">{result.summary}</p>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { label: "ఎంట్రీ", value: result.entry },
-                  { label: "టార్గెట్", value: result.target },
-                  { label: "స్టాప్ లాస్", value: result.stopLoss },
+                  { label: "ఎంట్రీ", value: result.entry, level: result.entryPrice },
+                  { label: "టార్గెట్", value: result.target, level: result.targetPrice },
+                  { label: "స్టాప్ లాస్", value: result.stopLoss, level: result.stopPrice },
                 ].map((item) => (
                   <div key={item.label} className="rounded-lg border border-border bg-secondary p-3">
                     <div className="text-xs text-muted-foreground">{item.label}</div>
                     <div className="mt-1 font-semibold">{item.value}</div>
+                    {quote && item.level > 0 && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        లైవ్ ధర నుండి {(((item.level - quote.price) / quote.price) * 100).toFixed(2)}%
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
