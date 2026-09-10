@@ -55,18 +55,103 @@ export const Route = createFileRoute("/")({
 const timeframes = ["ఇంట్రాడే", "స్వింగ్ (1-2 వారాలు)", "లాంగ్ టర్మ్"];
 const risks = ["తక్కువ", "మధ్యస్థం", "ఎక్కువ"];
 
+function formatPrice(value: number, currency: string) {
+  const symbol = currency === "INR" ? "₹" : currency === "USD" ? "$" : "";
+  return `${symbol}${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+function notify(title: string, body: string) {
+  toast(title, { description: body, duration: 10000 });
+  try {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") new Notification(title, { body });
+    }
+  } catch {
+    // notifications unavailable
+  }
+}
+
 function Index() {
   const [symbol, setSymbol] = useState("");
   const [timeframe, setTimeframe] = useState(timeframes[1]);
   const [risk, setRisk] = useState(risks[1]);
   const [capital, setCapital] = useState("");
+  const [activeSymbol, setActiveSymbol] = useState("");
+  const [alertsOn, setAlertsOn] = useState(true);
+  const firedRef = useRef<{ target: boolean; stop: boolean }>({ target: false, stop: false });
 
   const run = useServerFn(analyzeTrade);
+  const quoteFn = useServerFn(getQuote);
+
+  const quoteQuery = useQuery<Quote, Error>({
+    queryKey: ["quote", activeSymbol],
+    enabled: activeSymbol.length > 0,
+    queryFn: () => quoteFn({ data: { symbol: activeSymbol } }),
+    refetchInterval: 15000,
+    refetchIntervalInBackground: true,
+    retry: 1,
+  });
+
   const mutation = useMutation<AnalysisResult, Error>({
-    mutationFn: () => run({ data: { symbol, timeframe, risk, capital } }),
+    mutationFn: async () => {
+      let live: Quote | undefined;
+      try {
+        live = await quoteFn({ data: { symbol } });
+      } catch {
+        live = undefined;
+      }
+      firedRef.current = { target: false, stop: false };
+      setActiveSymbol(symbol.trim());
+      return run({
+        data: {
+          symbol,
+          timeframe,
+          risk,
+          capital,
+          ...(live ? { currentPrice: live.price, currency: live.currency } : {}),
+        },
+      });
+    },
   });
 
   const result = mutation.data;
+  const quote = quoteQuery.data;
+
+  // లైవ్ ధర టార్గెట్ / స్టాప్‌లాస్‌ను తాకినప్పుడు తెలుగులో అలర్ట్
+  useEffect(() => {
+    if (!alertsOn || !result || !quote) return;
+    const price = quote.price;
+    const bullish = result.targetPrice >= result.entryPrice;
+    const hitTarget = bullish ? price >= result.targetPrice : price <= result.targetPrice;
+    const hitStop = bullish ? price <= result.stopPrice : price >= result.stopPrice;
+
+    if (hitTarget && !firedRef.current.target) {
+      firedRef.current.target = true;
+      notify(
+        `🎯 ${activeSymbol.toUpperCase()} టార్గెట్ చేరింది!`,
+        `ప్రస్తుత ధర ${formatPrice(price, quote.currency)} — మీ టార్గెట్ ${formatPrice(result.targetPrice, quote.currency)} చేరుకుంది. లాభం బుక్ చేయడం గురించి ఆలోచించండి.`,
+      );
+    }
+    if (hitStop && !firedRef.current.stop) {
+      firedRef.current.stop = true;
+      notify(
+        `⚠️ ${activeSymbol.toUpperCase()} స్టాప్ లాస్ తాకింది`,
+        `ప్రస్తుత ధర ${formatPrice(price, quote.currency)} — మీ స్టాప్ లాస్ ${formatPrice(result.stopPrice, quote.currency)} దాటింది. రిస్క్‌ను నియంత్రించండి.`,
+      );
+    }
+  }, [quote, result, alertsOn, activeSymbol]);
+
+  const toggleAlerts = async (on: boolean) => {
+    setAlertsOn(on);
+    if (on && typeof window !== "undefined" && "Notification" in window) {
+      try {
+        if (Notification.permission === "default") await Notification.requestPermission();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
 
   return (
     <main className="min-h-screen">
