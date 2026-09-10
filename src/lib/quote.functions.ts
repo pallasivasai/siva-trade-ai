@@ -64,14 +64,19 @@ async function fetchOne(ticker: string, host: string): Promise<Quote | null> {
 
 export const getQuote = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => QuoteInput.parse(input))
-  .handler(async ({ data }): Promise<Quote> => {
+  .handler(async ({ data }): Promise<QuoteResult> => {
     for (const ticker of candidates(data.symbol)) {
-      try {
-        const quote = await fetchOne(ticker);
-        if (quote) return quote;
-      } catch {
-        // try next candidate
+      for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+        try {
+          const quote = await fetchOne(ticker, host);
+          if (quote) return { quote };
+        } catch {
+          // try next host / candidate
+        }
       }
     }
-    throw new Error("ప్రస్తుత ధర దొరకలేదు. సింబల్ సరిచూడండి (ఉదా: RELIANCE, TCS, BTC).");
+    return {
+      quote: null,
+      message: "ప్రస్తుత ధర దొరకలేదు. సింబల్ సరిచూడండి (ఉదా: RELIANCE, TCS, BTC).",
+    };
   });
