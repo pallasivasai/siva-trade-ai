@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { analyzeTrade, type AnalysisResult } from "@/lib/analysis.functions";
-import { getQuote, type Quote } from "@/lib/quote.functions";
+import { getQuote, type QuoteResult } from "@/lib/quote.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
