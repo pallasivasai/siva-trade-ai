@@ -154,3 +154,23 @@ Without this key, the AI analysis path cannot run.
 ## Links
 
 - [GitHub Repository](https://github.com/pallasivasai/siva-trade-ai)
+
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    A[Symbol + Timeframe + Risk + Capital] --> B[Market Quote Flow]
+    B --> C[Symbol Normalization]
+    C --> D[Recent Market Quote]
+    A --> E[AI Analysis Function]
+    D --> E
+    E --> F[Input Validation]
+    F --> G[Gemini AI Model]
+    G --> H[Structured Telugu Analysis]
+    H --> I[Result UI]
+    D --> I
+    I --> J[Price Alerts]
+```
+
+The architecture follows the repository's quote refresh, ticker normalization, AI analysis, structured result, and alert flows.
